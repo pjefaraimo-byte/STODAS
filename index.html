@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>STODAS Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#1B4F9B;--blue-light:#E8F0FB;--blue-mid:#3B7DD8;
+  --teal:#0F7B6C;--teal-light:#E0F4F1;
+  --amber:#C47A15;--amber-light:#FDF3E0;
+  --red:#B83232;--red-light:#FDECEC;
+  --green:#2E7D32;--green-light:#E8F5E9;
+  --purple:#512DA8;--purple-light:#EDE7F6;
+  --gray:#F5F6FA;--gray2:#E8EAF0;--gray3:#9399A8;--gray4:#3C4057;
+  --white:#fff;
+  --shadow:0 1px 4px rgba(0,0,0,.08),0 0 0 1px rgba(0,0,0,.04);
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+body{font-family:var(--font);background:#F0F2F8;color:var(--gray4);font-size:14px;}
+/* TOPBAR */
+.topbar{background:var(--blue);color:white;padding:13px 26px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.topbar h1{font-size:17px;font-weight:600;}
+.topbar .sub{font-size:11px;opacity:.75;margin-top:2px;}
+.topbar-right{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+.badge{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:3px 11px;font-size:11px;font-weight:500;white-space:nowrap;}
+.badge.green{background:#2E7D32;border-color:#4CAF50;}
+.badge.red{background:#B83232;border-color:#e05555;}
+/* SEARCH */
+.searchbar{background:white;border-bottom:1px solid var(--gray2);padding:7px 26px;display:flex;align-items:center;gap:10px;position:relative;}
+.searchbar input{flex:1;max-width:360px;border:1px solid var(--gray2);border-radius:20px;padding:6px 14px;font-size:13px;font-family:var(--font);outline:none;color:var(--gray4);}
+.searchbar input:focus{border-color:var(--blue);}
+#searchResults{display:none;position:absolute;top:42px;left:26px;background:white;border:1px solid var(--gray2);border-radius:8px;width:380px;max-height:270px;overflow-y:auto;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,.13);}
+.sri{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--gray2);font-size:12px;}
+.sri:hover{background:var(--gray);}
+.sri .sl{font-weight:600;color:var(--gray4);}
+.sri .ss{color:var(--gray3);font-size:11px;margin-top:1px;}
+.sri mark{background:#FFF3CD;border-radius:2px;padding:0 2px;}
+/* TABS */
+.tabs{background:var(--white);border-bottom:1px solid var(--gray2);padding:0 26px;display:flex;gap:1px;overflow-x:auto;}
+.tab{padding:11px 15px;font-size:13px;font-weight:500;color:var(--gray3);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s;user-select:none;white-space:nowrap;}
+.tab:hover{color:var(--blue);}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+/* PAGES */
+.page{display:none;padding:18px 26px 48px;}
+.page.active{display:block;}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:11px;margin-bottom:18px;}
+.kpi{background:var(--white);border-radius:10px;padding:13px 15px;box-shadow:var(--shadow);position:relative;}
+.kpi .lbl{font-size:10px;font-weight:600;color:var(--gray3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;}
+.kpi .val{font-size:20px;font-weight:600;color:var(--gray4);letter-spacing:-.5px;}
+.kpi .sub{font-size:11px;color:var(--gray3);margin-top:2px;}
+.kpi.blue .val{color:var(--blue);}
+.kpi.teal .val{color:var(--teal);}
+.kpi.amber .val{color:var(--amber);}
+.kpi.green .val{color:var(--green);}
+.kpi.red .val{color:var(--red);}
+.adot{position:absolute;top:11px;right:11px;width:7px;height:7px;border-radius:50%;}
+.adot.red{background:var(--red);}
+.adot.amber{background:var(--amber);}
+.adot.green{background:var(--green);}
+/* CARDS */
+.card{background:var(--white);border-radius:10px;box-shadow:var(--shadow);padding:16px 18px;margin-bottom:13px;}
+.ct{font-size:13px;font-weight:600;color:var(--gray4);margin-bottom:13px;letter-spacing:-.2px;display:flex;align-items:center;justify-content:space-between;}
+.ct span{font-weight:400;color:var(--gray3);font-size:12px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:13px;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px;}
+/* TABLES */
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{font-size:10px;font-weight:600;color:var(--gray3);text-transform:uppercase;letter-spacing:.5px;padding:6px 9px;text-align:left;border-bottom:1px solid var(--gray2);white-space:nowrap;}
+td{padding:7px 9px;border-bottom:1px solid var(--gray2);color:var(--gray4);}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:var(--gray)!important;}
+td.num{text-align:right;font-family:var(--mono);font-size:11px;}
+td.tot{font-weight:600;color:var(--blue);}
+tr.trow td{background:var(--blue-light);font-weight:600;color:var(--blue);border-top:1px solid #C5D8F5;}
+.over{color:var(--red)!important;font-weight:600;}
+/* PILLS & FLAGS */
+.pill{display:inline-block;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600;white-space:nowrap;}
+.pill.green{background:var(--green-light);color:var(--green);}
+.pill.amber{background:var(--amber-light);color:var(--amber);}
+.pill.red{background:var(--red-light);color:var(--red);}
+.pill.blue{background:var(--blue-light);color:var(--blue);}
+.pill.gray{background:var(--gray2);color:var(--gray3);}
+.flag{display:inline-flex;align-items:center;gap:3px;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;}
+.flag.red{background:var(--red-light);color:var(--red);}
+.flag.amber{background:var(--amber-light);color:var(--amber);}
+.flag.green{background:var(--green-light);color:var(--green);}
+.flag.gray{background:var(--gray2);color:var(--gray3);}
+/* PROGRESS */
+.pw{margin:4px 0;}
+.pl{display:flex;justify-content:space-between;font-size:11px;color:var(--gray3);margin-bottom:3px;}
+.pt{height:7px;background:var(--gray2);border-radius:4px;overflow:hidden;}
+.pf{height:100%;border-radius:4px;transition:width .6s ease;}
+.pm{height:5px;background:var(--gray2);border-radius:3px;margin-top:3px;overflow:hidden;}
+.pmf{height:100%;border-radius:3px;}
+/* LEGEND */
+.legend{display:flex;flex-wrap:wrap;gap:11px;margin-bottom:9px;font-size:11px;color:var(--gray3);}
+.li{display:flex;align-items:center;gap:4px;}
+.ld{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+/* BURN CARD */
+.burn-card{background:linear-gradient(135deg,#1B4F9B,#3B7DD8);border-radius:10px;padding:16px 18px;color:white;margin-bottom:13px;}
+.burn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:10px;}
+.bi .bl{font-size:10px;font-weight:600;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.bi .bv{font-size:18px;font-weight:700;}
+.bi .bs{font-size:11px;opacity:.65;margin-top:1px;}
+.burn-status{margin-top:10px;background:rgba(255,255,255,.15);border-radius:7px;padding:9px 13px;font-size:12px;}
+/* GAUGE */
+.gauge-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px;}
+.gc{background:var(--white);border-radius:10px;box-shadow:var(--shadow);padding:13px;text-align:center;}
+.gl{font-size:10px;font-weight:600;color:var(--gray3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.gp{font-size:19px;font-weight:700;margin-top:2px;}
+.gs{font-size:11px;color:var(--gray3);}
+/* TIMELINE */
+.tl-wrap{background:var(--white);border-radius:10px;box-shadow:var(--shadow);padding:16px 18px;margin-bottom:13px;}
+.tl-bar{position:relative;height:12px;background:var(--gray2);border-radius:6px;margin:12px 0 22px;}
+.tl-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--blue),var(--blue-mid));}
+.tl-now{position:absolute;top:-4px;width:2px;height:20px;background:var(--red);border-radius:1px;}
+.tl-dates{display:flex;justify-content:space-between;font-size:10px;color:var(--gray3);margin-top:-14px;}
+.ms-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;}
+.ms{display:inline-flex;align-items:center;gap:4px;background:var(--gray);border-radius:5px;padding:4px 9px;font-size:11px;}
+.msd{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+/* COUNTRY CARDS */
+.cc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:13px;}
+.cc{background:var(--white);border-radius:10px;box-shadow:var(--shadow);padding:14px;}
+.ccn{font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:5px;}
+.cs{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--gray2);}
+.cs:last-child{border-bottom:none;}
+.csl{color:var(--gray3);}
+/* TRAFFIC */
+.tg{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:11px;margin-bottom:14px;}
+.tc{background:var(--white);border-radius:10px;box-shadow:var(--shadow);padding:12px 14px;display:flex;align-items:flex-start;gap:10px;}
+.tico{font-size:20px;flex-shrink:0;line-height:1.1;}
+.ticl{font-size:12px;font-weight:600;color:var(--gray4);}
+.tics{font-size:11px;color:var(--gray3);margin-top:2px;line-height:1.4;}
+/* BUTTONS */
+.btn{border:none;border-radius:7px;padding:7px 15px;font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:opacity .15s;}
+.btn:hover{opacity:.85;}
+.btn-blue{background:var(--blue);color:white;}
+.btn-gray{background:var(--gray2);color:var(--gray4);}
+/* RF FILTERS */
+.rff{padding:4px 13px;border-radius:20px;border:1px solid var(--gray2);background:var(--white);color:var(--gray3);font-size:12px;font-weight:500;cursor:pointer;font-family:var(--font);transition:all .15s;}
+.rff:hover{border-color:var(--blue);color:var(--blue);}
+.rff.active{background:var(--blue);color:white;border-color:var(--blue);}
+/* LEVEL PILLS */
+.lp{display:inline-block;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;white-space:nowrap;}
+.lp-impact{background:var(--purple-light);color:var(--purple);}
+.lp-outcome{background:var(--teal-light);color:var(--teal);}
+.lp-o1{background:var(--blue-light);color:var(--blue);}
+.lp-o2{background:var(--amber-light);color:var(--amber);}
+.lp-o3{background:var(--green-light);color:var(--green);}
+/* BUDGET DRILLDOWN */
+.cat-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--gray2);background:var(--white);color:var(--gray3);font-size:12px;font-weight:500;cursor:pointer;font-family:var(--font);transition:all .15s;}
+.cat-btn:hover,.cat-btn.active{background:var(--blue);color:white;border-color:var(--blue);}
+@media print{
+  .tabs,.searchbar,.btn,.rff,.cat-btn{display:none!important;}
+  .page{display:block!important;padding:8px!important;}
+  body{background:white;}
+  .card,.kpi,.gc,.cc{box-shadow:none!important;border:1px solid var(--gray2)!important;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div>
+    <h1>STODAS — Country Progress Dashboard</h1>
+    <div class="sub">Fiji 🇫🇯 · Samoa 🇼🇸 · Solomon Islands 🇸🇧 &nbsp;|&nbsp; Aug 2023 – Jul 2026 &nbsp;|&nbsp; Data as at 31 Dec 2025</div>
+  </div>
+  <div class="topbar-right">
+    <div class="badge" id="b-elapsed"></div>
+    <div class="badge green">Active</div>
+    <div class="badge" id="b-days"></div>
+    <div class="badge red" id="b-burn"></div>
+    <button class="btn btn-blue" onclick="window.print()" style="font-size:11px;padding:5px 13px;">⬇ Export PDF</button>
+  </div>
+</div>
+
+<!-- SEARCH -->
+<div class="searchbar">
+  <input id="gs" type="text" placeholder="🔍  Search any indicator, line item, country…" oninput="doSearch(this.value)" onblur="setTimeout(()=>document.getElementById('searchResults').style.display='none',200)"/>
+  <div id="searchResults"></div>
+  <span style="font-size:11px;color:var(--gray3);">Search across all tabs · Press Enter to jump</span>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active"  onclick="showTab('exec')">📋 Executive Summary</div>
+  <div class="tab"         onclick="showTab('financial')">💰 Financial Overview</div>
+  <div class="tab"         onclick="showTab('budget')">📂 Budget Drilldown</div>
+  <div class="tab"         onclick="showTab('loa')">📄 LOA &amp; Procurement</div>
+  <div class="tab"         onclick="showTab('interventions')">🎯 Interventions</div>
+  <div class="tab"         onclick="showTab('results')">📊 Results Framework</div>
+</div>
+
+<!-- ═══════════════ EXECUTIVE SUMMARY ═══════════════ -->
+<div class="page active" id="page-exec">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <div style="font-size:14px;font-weight:600;">Executive Summary <span style="font-size:12px;font-weight:400;color:var(--gray3);">— programme snapshot as at 31 Dec 2025</span></div>
+    <button class="btn btn-blue" onclick="window.print()">⬇ Export PDF</button>
+  </div>
+
+  <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--gray3);margin-bottom:7px;">Programme Health — Traffic Light Status</div>
+  <div class="tg">
+    <div class="tc"><div class="tico">🟢</div><div><div class="ticl">Financial Delivery</div><div class="tics">$4.39M (40.9%) delivered. Staff costs 51.6% absorbed. Contracts at 20.4% — main risk area.</div></div></div>
+    <div class="tc"><div class="tico">🔴</div><div><div class="ticl">Underspend Risk</div><div class="tics">$6.35M balance with 67 days left. Need $94,791/day to fully absorb. Current rate: $2,814/day.</div></div></div>
+    <div class="tc"><div class="tico">🟡</div><div><div class="ticl">Farmer Training</div><div class="tics">415 of 2,000 target (20%). Acceleration needed in final quarter.</div></div></div>
+    <div class="tc"><div class="tico">🟢</div><div><div class="ticl">Incubation Centres</div><div class="tics">3 of 3 established (100%). All countries on track.</div></div></div>
+    <div class="tc"><div class="tico">🟡</div><div><div class="ticl">Policy Advisories</div><div class="tics">4 of 15 (27%). 9 additional reviews underway.</div></div></div>
+    <div class="tc"><div class="tico">🔴</div><div><div class="ticl">Youth &amp; Women Training</div><div class="tics">19 of 500 target (3.8%). Significant acceleration required.</div></div></div>
+    <div class="tc"><div class="tico">⚠️</div><div><div class="ticl">Over-Budget Lines</div><div class="tics">5 line items exceed budget: LOA Activity 1.1 ($159K over), Feed Production, Vehicle (Samoa), FESM, Ops Support.</div></div></div>
+    <div class="tc"><div class="tico">🟡</div><div><div class="ticl">Interventions</div><div class="tics">35/83 on track (42%); 35 not started; 4 at risk/cancelled. Fiji 64% not started.</div></div></div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="tl-wrap">
+    <div class="ct">Project Timeline &amp; Milestones <span id="tlpct"></span></div>
+    <div class="tl-bar">
+      <div class="tl-fill" id="tlFill"></div>
+      <div class="tl-now" id="tlNow"></div>
+    </div>
+    <div class="tl-dates"><span>Aug 2023</span><span style="color:var(--red);font-weight:600;">▲ Today (26 May 2026)</span><span>Jul 2026</span></div>
+    <div class="ms-list">
+      <div class="ms"><div class="msd" style="background:var(--green)"></div>Project Launch — Aug 2023</div>
+      <div class="ms"><div class="msd" style="background:var(--blue)"></div>Pacific Agri-Innovate — 2024 (30 businesses)</div>
+      <div class="ms"><div class="msd" style="background:var(--blue)"></div>Incubators Established — Late 2025</div>
+      <div class="ms"><div class="msd" style="background:var(--amber)"></div>Budget snapshot — 31 Dec 2025</div>
+      <div class="ms"><div class="msd" style="background:var(--amber)"></div>Baseline Study (pending)</div>
+      <div class="ms"><div class="msd" style="background:var(--red)"></div>Project End — Jul 2026</div>
+    </div>
+  </div>
+
+  <!-- Country Scorecards -->
+  <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--gray3);margin-bottom:7px;">Country Scorecards</div>
+  <div class="cc-grid">
+    <div class="cc">
+      <div class="ccn">🇫🇯 Fiji</div>
+      <div class="cs"><span class="csl">LOA &amp; SCs</span><span style="font-weight:600;">8 total</span></div>
+      <div class="cs"><span class="csl">Operational</span><span style="color:var(--green);font-weight:600;">3</span></div>
+      <div class="cs"><span class="csl">Interventions On Track</span><span style="color:var(--amber);font-weight:600;">8 / 36 (22%)</span></div>
+      <div class="cs"><span class="csl">Not Started</span><span style="color:var(--red);font-weight:600;">23 (64%)</span></div>
+      <div class="cs"><span class="csl">Procurement</span><span>$351,247</span></div>
+      <div class="cs"><span class="csl">Incubator</span><span style="color:var(--green);font-weight:600;">✓ Established</span></div>
+    </div>
+    <div class="cc">
+      <div class="ccn">🇼🇸 Samoa</div>
+      <div class="cs"><span class="csl">LOA &amp; SCs</span><span style="font-weight:600;">7 total</span></div>
+      <div class="cs"><span class="csl">Operational</span><span style="color:var(--amber);font-weight:600;">1</span></div>
+      <div class="cs"><span class="csl">Interventions On Track</span><span style="color:var(--amber);font-weight:600;">3 / 20 (15%)</span></div>
+      <div class="cs"><span class="csl">Not Started</span><span style="color:var(--amber);font-weight:600;">11 (55%)</span></div>
+      <div class="cs"><span class="csl">Procurement</span><span>$353,985</span></div>
+      <div class="cs"><span class="csl">Incubator</span><span style="color:var(--green);font-weight:600;">✓ Established</span></div>
+    </div>
+    <div class="cc">
+      <div class="ccn">🇸🇧 Solomon Islands</div>
+      <div class="cs"><span class="csl">LOA &amp; SCs</span><span style="font-weight:600;">13 total</span></div>
+      <div class="cs"><span class="csl">Operational</span><span style="color:var(--green);font-weight:600;">10</span></div>
+      <div class="cs"><span class="csl">Interventions On Track</span><span style="color:var(--green);font-weight:600;">24 / 27 (89%)</span></div>
+      <div class="cs"><span class="csl">At Risk</span><span style="color:var(--red);font-weight:600;">1</span></div>
+      <div class="cs"><span class="csl">Procurement</span><span>$321,461</span></div>
+      <div class="cs"><span class="csl">Incubator</span><span style="color:var(--green);font-weight:600;">✓ Established</span></div>
+    </div>
+  </div>
+
+  <!-- Key findings -->
+  <div class="card">
+    <div class="ct">Key Findings &amp; Risks</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:12px;line-height:1.6;">
+      <div>
+        <div style="font-weight:600;color:var(--green);margin-bottom:5px;">✅ Highlights</div>
+        <ul style="padding-left:14px;color:var(--gray4);">
+          <li>All 3 agribusiness incubation centres successfully established.</li>
+          <li>Solomon Islands leading: 89% of interventions on track.</li>
+          <li>$525K tranche payments made to LOA partners.</li>
+          <li>30 agribusinesses supported under Pacific Agri-Innovate 2024.</li>
+          <li>Staff costs 51.6% absorbed — project well-staffed.</li>
+          <li>Sustainable practice pilots underway across all 3 countries.</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-weight:600;color:var(--red);margin-bottom:5px;">⚠ Risks &amp; Actions Required</div>
+        <ul style="padding-left:14px;color:var(--gray4);">
+          <li><strong>Severe underspend risk:</strong> $6.35M unspent, 67 days left. Need $94K/day.</li>
+          <li>5 budget lines already over-budget — require monitoring.</li>
+          <li>Youth &amp; women training at 3.8% — urgent action needed.</li>
+          <li>64% of Fiji interventions not yet started.</li>
+          <li>Impact baseline study still pending; risks SDG 2.1.2 measurement.</li>
+          <li>Contracts category at 20.4% spend — large balance at risk of lapsing.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ FINANCIAL OVERVIEW ═══════════════ -->
+<div class="page" id="page-financial">
+  <div class="kpi-grid">
+    <div class="kpi blue"><div class="lbl">Total Budget</div><div class="val">$10.74M</div><div class="sub">EUR 10M / USD 10.744M</div></div>
+    <div class="kpi teal"><div class="lbl">Cash Balance</div><div class="val">$6.35M</div><div class="sub">59.1% of budget remaining</div></div>
+    <div class="kpi green"><div class="lbl">Actuals (A)</div><div class="val">$2.89M</div><div class="sub">26.9% of budget delivered</div></div>
+    <div class="kpi amber"><div class="lbl">Hard Commitments (H)</div><div class="val">$1.50M</div><div class="sub">14.0% of budget</div><div class="adot amber"></div></div>
+    <div class="kpi"><div class="lbl">Total Delivery (A+H)</div><div class="val">$4.39M</div><div class="sub">40.9% of budget</div></div>
+    <div class="kpi red"><div class="lbl">Underspend Risk</div><div class="val" id="undVal"></div><div class="sub">projected unspent (67 days)</div><div class="adot red"></div></div>
+  </div>
+
+  <!-- Burn Rate -->
+  <div class="burn-card">
+    <div style="font-size:13px;font-weight:600;">🔥 Burn Rate Analysis — <span id="daysLeftSpan"></span> days remaining to project end</div>
+    <div class="burn-grid">
+      <div class="bi"><div class="bl">Daily Rate Needed</div><div class="bv" id="bv1"></div><div class="bs">to absorb $6.35M balance</div></div>
+      <div class="bi"><div class="bl">Monthly Equivalent</div><div class="bv" id="bv2"></div><div class="bs">implied monthly burn</div></div>
+      <div class="bi"><div class="bl">Actual Daily Rate (to date)</div><div class="bv" id="bv3"></div><div class="bs">$2.89M actuals over 1,028 days</div></div>
+      <div class="bi"><div class="bl">Rate Multiple Needed</div><div class="bv" id="bv4"></div><div class="bs">times faster than current pace</div></div>
+    </div>
+    <div class="burn-status" id="burnMsg"></div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="ct">Budget Allocation <span>by category</span></div>
+      <div class="legend">
+        <div class="li"><div class="ld" style="background:#1B4F9B"></div>Actuals (26.9%)</div>
+        <div class="li"><div class="ld" style="background:#C47A15"></div>Hard Commitments (14.0%)</div>
+        <div class="li"><div class="ld" style="background:#9399A8"></div>Soft Commitments (4.2%)</div>
+        <div class="li"><div class="ld" style="background:#0F7B6C"></div>Cash Balance (54.9%)</div>
+      </div>
+      <div style="position:relative;height:210px;"><canvas id="donutChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Spend by Budget Category</div>
+      <div style="position:relative;height:250px;"><canvas id="catBar"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Budget Summary Table <span>as at 31 Dec 2025</span></div>
+    <table>
+      <thead><tr><th>Category</th><th>Total Budget (USD)</th><th>Actuals (USD)</th><th>% Spent</th><th>Hard Commits (USD)</th><th>Total Delivery</th><th>Balance (USD)</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Staff Costs</td><td class="num">$2,191,956</td><td class="num">$1,130,576</td><td class="num">51.6%</td><td class="num">$117,969</td><td class="num">$1,248,545</td><td class="num">$943,412</td><td><span class="flag green">✓ On Track</span></td></tr>
+        <tr><td>Travel</td><td class="num">$927,316</td><td class="num">$268,855</td><td class="num">29.0%</td><td class="num">$18,880</td><td class="num">$287,735</td><td class="num">$639,581</td><td><span class="flag amber">⚠ Monitor</span></td></tr>
+        <tr><td>Training</td><td class="num">$645,000</td><td class="num">$69,708</td><td class="num">10.8%</td><td class="num">$2,062</td><td class="num">$71,770</td><td class="num">$573,230</td><td><span class="flag red">🔴 Low</span></td></tr>
+        <tr><td>Contracts (LOA)</td><td class="num">$3,960,000</td><td class="num">$806,095</td><td class="num">20.4%</td><td class="num">$962,048</td><td class="num">$1,768,143</td><td class="num">$2,191,857</td><td><span class="flag red">🔴 Low</span></td></tr>
+        <tr><td>Procurement</td><td class="num">$2,085,015</td><td class="num">$397,896</td><td class="num">19.1%</td><td class="num">$398,064</td><td class="num">$795,960</td><td class="num">$1,289,055</td><td><span class="flag amber">⚠ Monitor</span></td></tr>
+        <tr><td>Technical Support</td><td class="num">$63,187</td><td class="num">$17,020</td><td class="num">26.9%</td><td class="num">$0</td><td class="num">$17,020</td><td class="num">$46,167</td><td><span class="flag amber">⚠ Monitor</span></td></tr>
+        <tr><td>General Operating</td><td class="num">$123,648</td><td class="num">$17,713</td><td class="num">14.3%</td><td class="num">$1,243</td><td class="num">$18,956</td><td class="num">$104,692</td><td><span class="flag red">🔴 Low</span></td></tr>
+        <tr><td>Support Cost (7%)</td><td class="num">$702,879</td><td class="num">$184,849</td><td class="num">26.3%</td><td class="num">—</td><td class="num">$184,849</td><td class="num">$518,030</td><td><span class="flag amber">⚠ Monitor</span></td></tr>
+        <tr class="trow"><td>TOTAL</td><td class="num">$10,744,000</td><td class="num">$2,892,711</td><td class="num">26.9%</td><td class="num">$1,500,265</td><td class="num">$4,392,976</td><td class="num">$6,351,024</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="ct">Cumulative Spend Scenarios <span>by month from project start</span></div>
+    <div class="legend">
+      <div class="li"><div class="ld" style="background:#1B4F9B"></div>Averaged (116K/mo)</div>
+      <div class="li"><div class="ld" style="background:#C47A15"></div>Target (298K/mo)</div>
+      <div class="li"><div class="ld" style="background:#B83232"></div>Accelerated (500K/mo)</div>
+    </div>
+    <div style="position:relative;height:250px;"><canvas id="lineChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══════════════ BUDGET DRILLDOWN ═══════════════ -->
+<div class="page" id="page-budget">
+  <div class="kpi-grid">
+    <div class="kpi red"><div class="lbl">Over-Budget Lines</div><div class="val">5</div><div class="sub">items exceed total budget</div><div class="adot red"></div></div>
+    <div class="kpi amber"><div class="lbl">Contracts Balance</div><div class="val">$2.19M</div><div class="sub">largest unspent category</div></div>
+    <div class="kpi"><div class="lbl">Training Balance</div><div class="val">$573K</div><div class="sub">only 10.8% spent</div></div>
+    <div class="kpi teal"><div class="lbl">Staff Absorption</div><div class="val">51.6%</div><div class="sub">highest spend % category</div><div class="adot green"></div></div>
+    <div class="kpi"><div class="lbl">Procurement Balance</div><div class="val">$1.29M</div><div class="sub">19.1% spent</div></div>
+    <div class="kpi"><div class="lbl">Travel Balance</div><div class="val">$640K</div><div class="sub">29.0% spent</div></div>
+  </div>
+
+  <!-- Category filter -->
+  <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:13px;align-items:center;">
+    <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray3);">Filter:</span>
+    <button class="cat-btn active" onclick="filterBudget('all')">All Lines</button>
+    <button class="cat-btn" onclick="filterBudget('Staff')">Staff Costs</button>
+    <button class="cat-btn" onclick="filterBudget('Travel')">Travel</button>
+    <button class="cat-btn" onclick="filterBudget('Training')">Training</button>
+    <button class="cat-btn" onclick="filterBudget('Contracts')">Contracts</button>
+    <button class="cat-btn" onclick="filterBudget('Procurement')">Procurement</button>
+    <button class="cat-btn" onclick="filterBudget('Technical')">Technical</button>
+    <button class="cat-btn" onclick="filterBudget('General')">General Operating</button>
+    <button class="cat-btn" onclick="filterBudget('over')">⚠ Over Budget</button>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div style="overflow-x:auto;">
+      <table id="budgetTable" style="min-width:900px;">
+        <thead>
+          <tr style="background:var(--blue);">
+            <th style="color:white;padding:9px 11px;">No.</th>
+            <th style="color:white;padding:9px 11px;">Category</th>
+            <th style="color:white;padding:9px 11px;">Description</th>
+            <th style="color:white;padding:9px 11px;text-align:right;">Total Budget</th>
+            <th style="color:white;padding:9px 11px;text-align:right;">Actuals</th>
+            <th style="color:white;padding:9px 11px;text-align:right;">% Spent</th>
+            <th style="color:white;padding:9px 11px;text-align:right;">Hard Commits</th>
+            <th style="color:white;padding:9px 11px;text-align:right;">Balance</th>
+            <th style="color:white;padding:9px 11px;">Status</th>
+          </tr>
+        </thead>
+        <tbody id="budgetBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ LOA & PROCUREMENT ═══════════════ -->
+<div class="page" id="page-loa">
+  <div class="kpi-grid">
+    <div class="kpi blue"><div class="lbl">Total LOA &amp; SCs</div><div class="val">30</div><div class="sub">across all countries</div></div>
+    <div class="kpi green"><div class="lbl">Operational</div><div class="val">15</div><div class="sub">50% of total</div><div class="adot green"></div></div>
+    <div class="kpi"><div class="lbl">Under Development</div><div class="val">8</div><div class="sub">26.7% of total</div></div>
+    <div class="kpi amber"><div class="lbl">Committed Value</div><div class="val">$1.86M</div><div class="sub">total across countries</div></div>
+    <div class="kpi teal"><div class="lbl">Payments Made</div><div class="val">$525K</div><div class="sub">28.3% of committed</div></div>
+    <div class="kpi red"><div class="lbl">Balance Remaining</div><div class="val">$1.33M</div><div class="sub">71.7% of committed</div><div class="adot red"></div></div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="ct">LOA &amp; SC Status by Country</div>
+      <div style="position:relative;height:220px;"><canvas id="loaBar"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">LOA &amp; SC Count <span>by status</span></div>
+      <table>
+        <thead><tr><th>Status</th><th>Fiji</th><th>Samoa</th><th>Sol. Islands</th><th>3-Country</th><th>Total</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill amber">Under Dev.</span></td><td class="num">4</td><td class="num">4</td><td class="num">0</td><td class="num">0</td><td class="num tot">8</td></tr>
+          <tr><td><span class="pill gray">Under Clearance</span></td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num tot">0</td></tr>
+          <tr><td><span class="pill green">Operational</span></td><td class="num">3</td><td class="num">1</td><td class="num">10</td><td class="num">1</td><td class="num tot">15</td></tr>
+          <tr><td><span class="pill red">Expired</span></td><td class="num">0</td><td class="num">0</td><td class="num">3</td><td class="num">0</td><td class="num tot">3</td></tr>
+          <tr><td><span class="pill blue">Closed</span></td><td class="num">1</td><td class="num">2</td><td class="num">0</td><td class="num">1</td><td class="num tot">4</td></tr>
+          <tr class="trow"><td>Total</td><td class="num">8</td><td class="num">7</td><td class="num">13</td><td class="num">2</td><td class="num">30</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="ct">Procurement Pipeline by Stage (USD)</div>
+      <div style="position:relative;height:230px;"><canvas id="procBar"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">LOA Financial Summary (USD)</div>
+      <table>
+        <thead><tr><th>Metric</th><th>Fiji</th><th>Samoa</th><th>Sol. Islands</th><th>Total</th></tr></thead>
+        <tbody>
+          <tr><td>Committed Value</td><td class="num">$207,139</td><td class="num">$246,212</td><td class="num">$1,171,165</td><td class="num tot">$1,855,743</td></tr>
+          <tr><td>Payments Made</td><td class="num">$84,542</td><td class="num">$197,722</td><td class="num">$122,691</td><td class="num tot">$525,118</td></tr>
+          <tr><td>Balance</td><td class="num">$122,597</td><td class="num">$127,007</td><td class="num">$255,603</td><td class="num tot">$1,330,625</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:16px;">
+        <div class="ct" style="margin-bottom:8px;">Procurement Totals (USD)</div>
+        <table>
+          <thead><tr><th>Country</th><th>Bids Under Eval.</th><th>On Order</th><th>Delivered</th><th>Total</th></tr></thead>
+          <tbody>
+            <tr><td>🇫🇯 Fiji</td><td class="num">$193,600</td><td class="num">$145,448</td><td class="num">$12,199</td><td class="num tot">$351,247</td></tr>
+            <tr><td>🇼🇸 Samoa</td><td class="num">$81,495</td><td class="num">$0</td><td class="num">$272,490</td><td class="num tot">$353,985</td></tr>
+            <tr><td>🇸🇧 Solomon Islands</td><td class="num">$177,075</td><td class="num">$75,163</td><td class="num">$69,223</td><td class="num tot">$321,461</td></tr>
+            <tr class="trow"><td>Total</td><td class="num">$452,170</td><td class="num">$220,611</td><td class="num">$353,912</td><td class="num">$1,026,693</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ INTERVENTIONS ═══════════════ -->
+<div class="page" id="page-interventions">
+  <div class="kpi-grid">
+    <div class="kpi blue"><div class="lbl">Total Interventions</div><div class="val">83</div><div class="sub">across all countries</div></div>
+    <div class="kpi green"><div class="lbl">On Track</div><div class="val">35</div><div class="sub">42.2% of total</div><div class="adot green"></div></div>
+    <div class="kpi teal"><div class="lbl">Completed</div><div class="val">9</div><div class="sub">10.8% of total</div></div>
+    <div class="kpi amber"><div class="lbl">Not Started</div><div class="val">35</div><div class="sub">42.2% — needs attention</div><div class="adot amber"></div></div>
+    <div class="kpi red"><div class="lbl">At Risk / Cancelled</div><div class="val">4</div><div class="sub">4.8% of total</div><div class="adot red"></div></div>
+  </div>
+  <div class="two-col">
+    <div class="card"><div class="ct">Status by Country</div><div style="position:relative;height:250px;"><canvas id="intBar"></canvas></div></div>
+    <div class="card">
+      <div class="ct">Overall Status Distribution</div>
+      <div style="position:relative;height:180px;margin-bottom:12px;"><canvas id="intDonut"></canvas></div>
+      <div class="legend">
+        <div class="li"><div class="ld" style="background:#1B4F9B"></div>On Track (35)</div>
+        <div class="li"><div class="ld" style="background:#0F7B6C"></div>Completed (9)</div>
+        <div class="li"><div class="ld" style="background:#C47A15"></div>Not Started (35)</div>
+        <div class="li"><div class="ld" style="background:#B83232"></div>At Risk (1)</div>
+        <div class="li"><div class="ld" style="background:#9399A8"></div>Cancelled (3)</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">Detailed Status by Country</div>
+    <table>
+      <thead><tr><th>Status</th><th>Alert</th><th>🇫🇯 Fiji</th><th>🇼🇸 Samoa</th><th>🇸🇧 Solomon Islands</th><th>Total</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill green">On Track</span></td><td><span class="flag green">✓</span></td><td class="num">8</td><td class="num">3</td><td class="num">24</td><td class="num tot">35</td></tr>
+        <tr><td><span class="pill blue">Completed</span></td><td><span class="flag green">✓</span></td><td class="num">2</td><td class="num">6</td><td class="num">1</td><td class="num tot">9</td></tr>
+        <tr><td><span class="pill amber">Not Started</span></td><td><span class="flag amber">⚠</span></td><td class="num">23</td><td class="num">11</td><td class="num">1</td><td class="num tot">35</td></tr>
+        <tr><td><span class="pill gray">Delayed</span></td><td><span class="flag gray">—</span></td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num tot">0</td></tr>
+        <tr><td><span class="pill red">At Risk</span></td><td><span class="flag red">🔴</span></td><td class="num">0</td><td class="num">0</td><td class="num">1</td><td class="num tot">1</td></tr>
+        <tr><td><span class="pill red">Cancelled</span></td><td><span class="flag red">🔴</span></td><td class="num">3</td><td class="num">0</td><td class="num">0</td><td class="num tot">3</td></tr>
+        <tr class="trow"><td>Total</td><td></td><td class="num">36</td><td class="num">20</td><td class="num">27</td><td class="num">83</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="ct">Country Completion Rate <span>on track + completed</span></div>
+    <div class="pw" style="margin-bottom:10px;"><div class="pl"><span>🇸🇧 Solomon Islands</span><span style="font-weight:600;color:var(--teal)">92.6% (25/27)</span></div><div class="pt"><div class="pf" style="width:93%;background:var(--teal)"></div></div></div>
+    <div class="pw" style="margin-bottom:10px;"><div class="pl"><span>🇼🇸 Samoa</span><span style="font-weight:600;color:var(--blue-mid)">45% (9/20)</span></div><div class="pt"><div class="pf" style="width:45%;background:var(--blue-mid)"></div></div></div>
+    <div class="pw"><div class="pl"><span>🇫🇯 Fiji</span><span style="font-weight:600;color:var(--amber)">27.8% (10/36)</span></div><div class="pt"><div class="pf" style="width:28%;background:var(--amber)"></div></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════ RESULTS FRAMEWORK ═══════════════ -->
+<div class="page" id="page-results">
+  <div class="kpi-grid">
+    <div class="kpi blue"><div class="lbl">Impact Indicators</div><div class="val">1</div><div class="sub">SDG 2.1.2 food security</div></div>
+    <div class="kpi teal"><div class="lbl">Outcome Indicators</div><div class="val">1</div><div class="sub">SDG 2.4.1 sustainable ag.</div></div>
+    <div class="kpi"><div class="lbl">Output Indicators</div><div class="val">13</div><div class="sub">Outputs 1, 2 &amp; 3</div></div>
+    <div class="kpi green"><div class="lbl">Incubators</div><div class="val">3 / 3</div><div class="sub">100% — all complete</div><div class="adot green"></div></div>
+    <div class="kpi amber"><div class="lbl">Farmers Trained</div><div class="val">415</div><div class="sub">20% of 2,000 target</div><div class="adot amber"></div></div>
+    <div class="kpi red"><div class="lbl">Youth &amp; Women</div><div class="val">19 / 500</div><div class="sub">3.8% — urgent</div><div class="adot red"></div></div>
+  </div>
+
+  <!-- Gauges -->
+  <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--gray3);margin-bottom:7px;">Progress-to-Target Gauges</div>
+  <div class="gauge-grid">
+    <div class="gc"><div class="gl">Farmers Trained</div><canvas width="120" height="70" id="g1"></canvas><div class="gp" style="color:var(--amber)">20%</div><div class="gs">415 of 2,000</div></div>
+    <div class="gc"><div class="gl">Policy Advisories</div><canvas width="120" height="70" id="g2"></canvas><div class="gp" style="color:var(--amber)">27%</div><div class="gs">4 of 15</div></div>
+    <div class="gc"><div class="gl">Incubators</div><canvas width="120" height="70" id="g3"></canvas><div class="gp" style="color:var(--green)">100%</div><div class="gs">3 of 3</div></div>
+    <div class="gc"><div class="gl">Agribusinesses</div><canvas width="120" height="70" id="g4"></canvas><div class="gp" style="color:var(--blue)">44%</div><div class="gs">40 of 90</div></div>
+    <div class="gc"><div class="gl">Youth &amp; Women</div><canvas width="120" height="70" id="g5"></canvas><div class="gp" style="color:var(--red)">3.8%</div><div class="gs">19 of 500</div></div>
+    <div class="gc"><div class="gl">Enablers Trained</div><canvas width="120" height="70" id="g6"></canvas><div class="gp" style="color:var(--amber)">15.7%</div><div class="gs">47 of 300</div></div>
+  </div>
+
+  <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
+    <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--gray3);">Filter:</span>
+    <button class="rff active" onclick="filterRF('all')">All</button>
+    <button class="rff" onclick="filterRF('Impact')">Impact</button>
+    <button class="rff" onclick="filterRF('Outcome')">Outcome</button>
+    <button class="rff" onclick="filterRF('Output 1')">Output 1</button>
+    <button class="rff" onclick="filterRF('Output 2')">Output 2</button>
+    <button class="rff" onclick="filterRF('Output 3')">Output 3</button>
+    <button class="rff" onclick="filterRF('behind')">🔴 Behind Target</button>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div style="overflow-x:auto;">
+      <table id="rfTable" style="min-width:1100px;">
+        <thead>
+          <tr style="background:var(--blue);">
+            <th style="color:white;padding:9px 11px;">Level</th>
+            <th style="color:white;padding:9px 11px;">Indicator</th>
+            <th style="color:white;padding:9px 11px;">Type</th>
+            <th style="color:white;padding:9px 11px;">Baseline</th>
+            <th style="color:white;padding:9px 11px;">2024</th>
+            <th style="color:white;padding:9px 11px;">Y2 Target</th>
+            <th style="color:white;padding:9px 11px;">2025</th>
+            <th style="color:white;padding:9px 11px;">Total Target</th>
+            <th style="color:white;padding:9px 11px;">Cumulative</th>
+            <th style="color:white;padding:9px 11px;">Alert</th>
+            <th style="color:white;padding:9px 11px;">Comments</th>
+          </tr>
+        </thead>
+        <tbody id="rfBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script>
+// ── DATES ──
+const START=new Date('2023-08-01'),END=new Date('2026-07-31'),TODAY=new Date('2026-05-26');
+const dTotal=Math.round((END-START)/864e5),dElapsed=Math.round((TODAY-START)/864e5),dLeft=Math.round((END-TODAY)/864e5);
+const pctTime=(dElapsed/dTotal*100).toFixed(1);
+document.getElementById('b-elapsed').textContent=dElapsed.toLocaleString()+' days elapsed';
+document.getElementById('b-days').textContent=dLeft+' days remaining';
+
+// ── BURN RATE ──
+const balance=6351024,actuals=2892711;
+const dailyNeeded=balance/dLeft,monthlyNeeded=dailyNeeded*30.44;
+const actualDaily=actuals/dElapsed,multiple=(dailyNeeded/actualDaily).toFixed(1);
+const projSpend=actualDaily*dLeft,underspend=balance-projSpend;
+document.getElementById('daysLeftSpan').textContent=dLeft;
+document.getElementById('bv1').textContent='$'+Math.round(dailyNeeded).toLocaleString();
+document.getElementById('bv2').textContent='$'+Math.round(monthlyNeeded).toLocaleString();
+document.getElementById('bv3').textContent='$'+Math.round(actualDaily).toLocaleString();
+document.getElementById('bv4').textContent=multiple+'×';
+document.getElementById('undVal').textContent='$'+Math.round(underspend/1e6*10)/10+'M';
+document.getElementById('b-burn').textContent='Need $'+Math.round(dailyNeeded/1000)+'K/day';
+document.getElementById('burnMsg').textContent='⚠ At current burn rate of $'+Math.round(actualDaily).toLocaleString()+'/day, estimated $'+Math.round(underspend/1e6*100)/100+'M will remain unabsorbed at project end. A '+multiple+'× increase in daily spend is required to fully utilise the balance.';
+
+// ── TIMELINE ──
+document.getElementById('tlFill').style.width=pctTime+'%';
+document.getElementById('tlNow').style.left=pctTime+'%';
+document.getElementById('tlpct').textContent=pctTime+'% of project time elapsed';
+
+// ── TABS ──
+function showTab(n){
+  const ord=['exec','financial','budget','loa','interventions','results'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',ord[i]===n));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+n).classList.add('active');
+}
+
+// ── SEARCH ──
+const SI=[
+  {tab:'exec',l:'Executive Summary — programme overview',v:'traffic lights, country scorecards, key findings'},
+  {tab:'financial',l:'Total Budget',v:'$10,744,000 (EUR 10M)'},
+  {tab:'financial',l:'Actuals delivered',v:'$2,892,711 (26.9% of budget)'},
+  {tab:'financial',l:'Hard Commitments',v:'$1,500,265 (14.0%)'},
+  {tab:'financial',l:'Cash Balance',v:'$6,351,024 remaining'},
+  {tab:'financial',l:'Total Delivery A+H',v:'$4,392,976 (40.9%)'},
+  {tab:'financial',l:'Burn rate needed',v:'$'+Math.round(dailyNeeded).toLocaleString()+'/day to absorb balance'},
+  {tab:'budget',l:'Staff Costs',v:'$2,191,956 total — $1,130,576 actuals (51.6%)'},
+  {tab:'budget',l:'Travel budget',v:'$927,316 total — $268,855 actuals (29.0%)'},
+  {tab:'budget',l:'Training budget',v:'$645,000 total — $69,708 actuals (10.8%)'},
+  {tab:'budget',l:'Contracts (LOA)',v:'$3,960,000 total — $806,095 actuals (20.4%)'},
+  {tab:'budget',l:'Procurement budget',v:'$2,085,015 total — $397,896 actuals (19.1%)'},
+  {tab:'budget',l:'Over-budget line items',v:'LOA Activity 1.1, Feed Production, Vehicle Samoa, FESM, Ops Support Samoa'},
+  {tab:'budget',l:'Agricultural Officer salary',v:'$639,432 total — $398,442 actuals'},
+  {tab:'budget',l:'National Policy Coordinators',v:'$432,000 total — $214,981 actuals (3 countries)'},
+  {tab:'loa',l:'Total LOA & SCs',v:'30 across all countries'},
+  {tab:'loa',l:'Operational LOAs',v:'15 (50%)'},
+  {tab:'loa',l:'Fiji LOA',v:'8 total, 3 operational'},
+  {tab:'loa',l:'Samoa LOA',v:'7 total, 1 operational'},
+  {tab:'loa',l:'Solomon Islands LOA',v:'13 total, 10 operational'},
+  {tab:'loa',l:'Procurement total',v:'$1,026,693 across 3 countries'},
+  {tab:'interventions',l:'On Track interventions',v:'35 of 83 (42.2%)'},
+  {tab:'interventions',l:'Not Started interventions',v:'35 of 83 — Fiji has 23 not started'},
+  {tab:'interventions',l:'Solomon Islands interventions',v:'24 of 27 on track (89%)'},
+  {tab:'results',l:'Farmers trained',v:'415 of 2,000 (20%)'},
+  {tab:'results',l:'Policy advisories',v:'4 of 15 (27%)'},
+  {tab:'results',l:'Agribusiness incubators',v:'3 of 3 (100%)'},
+  {tab:'results',l:'Youth and women trained',v:'19 of 500 (3.8%) — behind target'},
+  {tab:'results',l:'Agribusinesses supported',v:'40 of 90 (44%)'},
+  {tab:'results',l:'SDG 2.1.2 food insecurity',v:'Impact indicator — baseline study pending'},
+];
+function doSearch(q){
+  const box=document.getElementById('searchResults');
+  if(!q.trim()){box.style.display='none';return;}
+  const m=SI.filter(r=>r.l.toLowerCase().includes(q.toLowerCase())||r.v.toLowerCase().includes(q.toLowerCase())).slice(0,9);
+  if(!m.length){box.style.display='none';return;}
+  box.style.display='block';
+  const hl=s=>s.replace(new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark>$1</mark>');
+  box.innerHTML=m.map(r=>`<div class="sri" onclick="showTab('${r.tab}');document.getElementById('gs').value='';document.getElementById('searchResults').style.display='none';">
+    <div class="sl">${hl(r.l)}</div>
+    <div class="ss">${hl(r.v)} · <b style="color:var(--blue)">${r.tab.charAt(0).toUpperCase()+r.tab.slice(1)}</b></div>
+  </div>`).join('');
+}
+
+// ── BUDGET DATA ──
+const budgetLines=[
+  {no:1,cat:'Staff',desc:'Agricultural Officer (Agrifood Systems)',total:639432,actual:398442,hard:0,balance:240990},
+  {no:2,cat:'Staff',desc:'IT & Security Support Services (Staff)',total:22380,actual:2499,hard:0,balance:19881},
+  {no:3,cat:'Staff',desc:'International Operations Specialist',total:158400,actual:88552,hard:23639,balance:46209},
+  {no:4,cat:'Staff',desc:'MLA — International Operations Specialist',total:15200,actual:0,hard:0,balance:15200},
+  {no:5,cat:'Staff',desc:'International Procurement Specialist',total:158400,actual:45815,hard:5265,balance:107320},
+  {no:6,cat:'Staff',desc:'MLA — International Procurement Specialist',total:15200,actual:0,hard:0,balance:15200},
+  {no:7,cat:'Staff',desc:'International Subject Matter Experts',total:178200,actual:144422,hard:32366,balance:1412},
+  {no:8,cat:'Staff',desc:'Lead Consultant — Final Evaluation',total:30000,actual:0,hard:0,balance:30000},
+  {no:9,cat:'Staff',desc:'FAO Office of Evaluation Consultant',total:10500,actual:0,hard:0,balance:10500},
+  {no:10,cat:'Staff',desc:'National Policy & Project Coordinators (3 countries)',total:432000,actual:214981,hard:23223,balance:193796},
+  {no:11,cat:'Staff',desc:'National Subject Matter Experts (3 countries)',total:162000,actual:102278,hard:16689,balance:43033},
+  {no:12,cat:'Staff',desc:'National Communications Consultant',total:30200,actual:26734,hard:0,balance:3465},
+  {no:13,cat:'Staff',desc:'National Admin & Logistics Support (Fiji)',total:90000,actual:34246,hard:773,balance:54980},
+  {no:14,cat:'Staff',desc:'National Driver (Fiji)',total:16000,actual:8285,hard:3285,balance:4430},
+  {no:15,cat:'Staff',desc:'National M&E Consultant (Samoa)',total:60000,actual:15584,hard:7716,balance:36700},
+  {no:16,cat:'Staff',desc:'National Procurement Support (Samoa)',total:29600,actual:0,hard:0,balance:29600},
+  {no:17,cat:'Staff',desc:'National Finance Support (Samoa)',total:29600,actual:0,hard:0,balance:29600},
+  {no:18,cat:'Staff',desc:'National Operations Support (Samoa)',total:29600,actual:29964,hard:6034,balance:-6397},
+  {no:19,cat:'Staff',desc:'National HR Support (Samoa)',total:18500,actual:1021,hard:-1022,balance:18500},
+  {no:20,cat:'Staff',desc:'National Consultants — Final Evaluation (3 countries)',total:15000,actual:0,hard:0,balance:15000},
+  {no:21,cat:'Staff',desc:'IT & Security Support Services (SCO)',total:51744,actual:17752,hard:0,balance:33992},
+  {no:22,cat:'Staff',desc:'Casual Labour / Skilled Labour',total:22500,actual:0,hard:0,balance:22500},
+  {no:23,cat:'Staff',desc:'Enumerators / Technical Casual Staff',total:22500,actual:0,hard:0,balance:22500},
+  {no:24,cat:'Travel',desc:'DSA — International Consultants & Staff',total:246456,actual:63480,hard:-3042,balance:186018},
+  {no:25,cat:'Travel',desc:'Airfare — International Consultants & Staff',total:324000,actual:53152,hard:13912,balance:256936},
+  {no:26,cat:'Travel',desc:'ARPM — Travel Cost',total:120000,actual:57455,hard:8818,balance:53727},
+  {no:27,cat:'Travel',desc:'DSA — National Consultants & Staff',total:25320,actual:10561,hard:-2505,balance:17264},
+  {no:28,cat:'Travel',desc:'Domestic Travel — National Consultants',total:22500,actual:1331,hard:1313,balance:19856},
+  {no:29,cat:'Travel',desc:'Non-staff Stakeholder Travel',total:54000,actual:44391,hard:384,balance:9225},
+  {no:30,cat:'Travel',desc:'Exposure Visits — Capacity Building',total:100000,actual:38485,hard:0,balance:61515},
+  {no:31,cat:'Travel',desc:'Airfare — Lead Consultant Final Evaluation',total:10000,actual:0,hard:0,balance:10000},
+  {no:32,cat:'Travel',desc:'Domestic Travel — Final Evaluation',total:12000,actual:0,hard:0,balance:12000},
+  {no:33,cat:'Travel',desc:'DSA — Final Evaluation Consultants',total:13040,actual:0,hard:0,balance:13040},
+  {no:34,cat:'Training',desc:'Activity 1.1: Trainings & Stakeholder Consultation',total:315000,actual:29559,hard:2062,balance:283379},
+  {no:35,cat:'Training',desc:'Activity 1.2a-d: Meetings & Workshops',total:270000,actual:21057,hard:0,balance:248943},
+  {no:36,cat:'Training',desc:'Activity 1.2e: PSC & ARPM Meetings',total:60000,actual:19092,hard:0,balance:40908},
+  {no:37,cat:'Contracts',desc:'LOA — Activity 1.1b,f,g,1.3a,b',total:450000,actual:237873,hard:371652,balance:-159524},
+  {no:38,cat:'Contracts',desc:'LOA — Activity 2.1a',total:300000,actual:0,hard:0,balance:300000},
+  {no:39,cat:'Contracts',desc:'Service Contracts — Activity 2.1 & 2.2',total:150000,actual:0,hard:0,balance:150000},
+  {no:40,cat:'Contracts',desc:'LOA — Activity 2.1b-i',total:600000,actual:69023,hard:93944,balance:437032},
+  {no:41,cat:'Contracts',desc:'LOA — Activity 2.1j',total:300000,actual:0,hard:0,balance:300000},
+  {no:42,cat:'Contracts',desc:'LOA — Activity 2.2',total:510000,actual:51824,hard:120674,balance:337502},
+  {no:43,cat:'Contracts',desc:'LOA — Activity 3.1',total:600000,actual:116752,hard:113289,balance:369959},
+  {no:44,cat:'Contracts',desc:'LOA — Activity 3.2a,b',total:450000,actual:187273,hard:119741,balance:142986},
+  {no:45,cat:'Contracts',desc:'LOA — Incubator Sponsor 3.2c,d',total:600000,actual:143350,hard:142747,balance:313903},
+  {no:46,cat:'Procurement',desc:'Irrigation, Farm Mechanization & Inputs',total:690000,actual:13866,hard:0,balance:676134},
+  {no:47,cat:'Procurement',desc:'Livestock Feed Production Equipment',total:330000,actual:51864,hard:322901,balance:-44765},
+  {no:48,cat:'Procurement',desc:'Piggery & Poultry Inputs',total:375000,actual:147523,hard:33780,balance:193697},
+  {no:49,cat:'Procurement',desc:'Small Garden Farm Inputs & Processing Equipment',total:300000,actual:37881,hard:0,balance:262119},
+  {no:50,cat:'Procurement',desc:'Knowledge Sharing Publications',total:81000,actual:8796,hard:0,balance:72204},
+  {no:51,cat:'Procurement',desc:'Laptops for Project Staff',total:34000,actual:30109,hard:0,balance:3891},
+  {no:52,cat:'Procurement',desc:'IT Equipment (Scanner, Printer)',total:75000,actual:3376,hard:0,balance:71624},
+  {no:53,cat:'Procurement',desc:'Vehicle — Feral Animal Mgmt (Samoa)',total:50015,actual:41614,hard:41383,balance:-32982},
+  {no:54,cat:'Procurement',desc:'Digital Media Equipment (Samoa & Solomon Is.)',total:150000,actual:62866,hard:0,balance:87134},
+  {no:55,cat:'Technical',desc:'Technical Backstopping — LTO/SAP Agriculture Officer',total:44825,actual:14331,hard:0,balance:30494},
+  {no:56,cat:'Technical',desc:'Technical Backstopping — HQ P5 Level',total:5375,actual:0,hard:0,balance:5375},
+  {no:57,cat:'Technical',desc:'Technical Backstopping — HQ P4 Level',total:4565,actual:0,hard:0,balance:4565},
+  {no:58,cat:'Technical',desc:'Environmental & Social Safeguards (FESM)',total:1872,actual:2689,hard:0,balance:-817},
+  {no:59,cat:'Technical',desc:'Reporting Cost',total:6550,actual:0,hard:0,balance:6550},
+  {no:60,cat:'General',desc:'Operation & Maintenance — Vehicles',total:24496,actual:0,hard:0,balance:24496},
+  {no:61,cat:'General',desc:'Office Running Costs (3 countries)',total:90252,actual:17713,hard:1243,balance:71296},
+  {no:62,cat:'General',desc:'GOE for Final Evaluation',total:8900,actual:0,hard:0,balance:8900},
+];
+function fmtUSD(v){if(v===0)return '—';const s='$'+Math.abs(Math.round(v)).toLocaleString();return v<0?'<span class="over">-'+s+'</span>':s;}
+function budgetFlag(r){
+  if(r.balance<0) return '<span class="flag red">🔴 Over Budget</span>';
+  const pct=r.actual/r.total*100;
+  if(pct>80) return '<span class="flag green">✓ Good</span>';
+  if(pct>30) return '<span class="flag amber">⚠ Monitor</span>';
+  if(pct===0) return '<span class="flag gray">— Not Started</span>';
+  return '<span class="flag red">🔴 Low Spend</span>';
+}
+function renderBudget(f){
+  const tb=document.getElementById('budgetBody');
+  let rows=f==='all'?budgetLines:f==='over'?budgetLines.filter(r=>r.balance<0):budgetLines.filter(r=>r.cat===f);
+  tb.innerHTML=rows.map((r,i)=>{
+    const pct=r.total>0?(r.actual/r.total*100).toFixed(1):0;
+    const pctBar=`<div style="display:flex;align-items:center;gap:6px;"><span>${pct}%</span><div style="flex:1;height:5px;background:var(--gray2);border-radius:3px;min-width:40px;overflow:hidden;"><div style="width:${Math.min(pct,100)}%;height:100%;background:${r.balance<0?'var(--red)':pct>50?'var(--teal)':'var(--blue)'};border-radius:3px;"></div></div></div>`;
+    return `<tr style="background:${i%2===0?'var(--white)':'var(--gray)'}">
+      <td style="color:var(--gray3);font-size:11px;">${r.no}</td>
+      <td><span class="pill ${r.cat==='Staff'?'blue':r.cat==='Travel'?'gray':r.cat==='Training'?'green':r.cat==='Contracts'?'amber':r.cat==='Procurement'?'blue':'gray'}">${r.cat}</span></td>
+      <td style="max-width:260px;font-size:12px;">${r.desc}</td>
+      <td class="num">${fmtUSD(r.total)}</td>
+      <td class="num">${fmtUSD(r.actual)}</td>
+      <td style="min-width:90px;">${pctBar}</td>
+      <td class="num">${r.hard!==0?fmtUSD(r.hard):'—'}</td>
+      <td class="num">${r.balance<0?fmtUSD(r.balance):'<span style="color:var(--teal)">'+fmtUSD(r.balance)+'</span>'}</td>
+      <td>${budgetFlag(r)}</td>
+    </tr>`;
+  }).join('');
+}
+function filterBudget(v){
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.toggle('active',b.textContent.trim().startsWith(v==='all'?'All':v==='over'?'⚠':v)));
+  renderBudget(v);
+}
+renderBudget('all');
+
+// ── CHARTS ──
+new Chart(document.getElementById('donutChart'),{
+  type:'doughnut',
+  data:{labels:['Actuals','Hard Commitments','Soft Commitments','Cash Balance'],
+    datasets:[{data:[2892711,1500265,446267,5904757],backgroundColor:['#1B4F9B','#C47A15','#9399A8','#0F7B6C'],borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.toLocaleString()}}}}
+});
+
+new Chart(document.getElementById('catBar'),{
+  type:'bar',
+  data:{labels:['Staff','Travel','Training','Contracts','Procurement','Tech Support','Gen Operating'],
+    datasets:[
+      {label:'Actuals',data:[1130576,268855,69708,806095,397896,17020,17713],backgroundColor:'#1B4F9B'},
+      {label:'Hard Commits',data:[117969,18880,2062,962048,398064,0,1243],backgroundColor:'#C47A15'},
+      {label:'Balance',data:[943412,639581,573230,2191858,1289055,46167,104692],backgroundColor:'#E8EAF0'}
+    ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:9,color:'#3C4057'}}},
+    scales:{x:{stacked:true,ticks:{color:'#9399A8',font:{size:9}},grid:{display:false}},
+            y:{stacked:true,ticks:{color:'#9399A8',callback:v=>'$'+(v/1e6).toFixed(1)+'M'},grid:{color:'#F0F2F8'}}}}
+});
+
+const months=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40];
+const averaged=[116968,233936,350904,467872,584840,701808,818776,935744,1052712,1169680,1286648,1403616,1520584,1637552,1754520,1871488,1988456,2105424,2222392,2339360,2456328,2573296,2690264,2807232,2924200,3041168,3158136,3275104,3392072,3509040,3626008,3742976,3859944,3976912,4093880,4210848,null,null,null,null];
+const target=[298444,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,3339612,3638056,3936500,4234944,4533388,4831832,5130276,5428720,5727164,6025608,6324052,6622496,6920940,7219384];
+const accel=[500000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,3541168,3839612,4138056,4638056,4936500,5234944,5734944,6033388,6331832,6831832,7130276,7428720,7928720,8227164];
+new Chart(document.getElementById('lineChart'),{
+  type:'line',data:{labels:months,datasets:[
+    {label:'Averaged',data:averaged,borderColor:'#1B4F9B',borderWidth:2,pointRadius:0,tension:.3,spanGaps:false,fill:false},
+    {label:'Target',data:target,borderColor:'#C47A15',borderWidth:2,pointRadius:0,tension:.3,spanGaps:false,fill:false,borderDash:[5,4]},
+    {label:'Accelerated',data:accel,borderColor:'#B83232',borderWidth:2,pointRadius:0,tension:.3,spanGaps:false,fill:false,borderDash:[2,3]}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+(ctx.parsed.y/1e6).toFixed(2)+'M'}}},
+    scales:{x:{ticks:{color:'#9399A8',font:{size:10},maxTicksLimit:10},grid:{color:'#F0F2F8'}},
+            y:{ticks:{color:'#9399A8',font:{size:10},callback:v=>'$'+(v/1e6).toFixed(1)+'M'},grid:{color:'#F0F2F8'}}}}
+});
+new Chart(document.getElementById('loaBar'),{
+  type:'bar',data:{labels:['Fiji','Samoa','Solomon Islands','3-Country'],datasets:[
+    {label:'Under Dev.',data:[4,4,0,0],backgroundColor:'#C47A15'},
+    {label:'Operational',data:[3,1,10,1],backgroundColor:'#0F7B6C'},
+    {label:'Expired',data:[0,0,3,0],backgroundColor:'#B83232'},
+    {label:'Closed',data:[1,2,0,1],backgroundColor:'#1B4F9B'}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:9,color:'#3C4057'}}},
+    scales:{x:{stacked:true,ticks:{color:'#9399A8'},grid:{display:false}},y:{stacked:true,ticks:{color:'#9399A8',stepSize:2},grid:{color:'#F0F2F8'}}}}
+});
+new Chart(document.getElementById('procBar'),{
+  type:'bar',data:{labels:['Bids Under Eval.','On Order','Delivered'],datasets:[
+    {label:'Fiji',data:[193600,145448,12199],backgroundColor:'#1B4F9B'},
+    {label:'Samoa',data:[81495,0,272490],backgroundColor:'#0F7B6C'},
+    {label:'Solomon Islands',data:[177075,75163,69223],backgroundColor:'#C47A15'}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:9,color:'#3C4057'}}},
+    scales:{x:{ticks:{color:'#9399A8',font:{size:10}},grid:{display:false}},
+            y:{ticks:{color:'#9399A8',callback:v=>'$'+(v/1000).toFixed(0)+'K'},grid:{color:'#F0F2F8'}}}}
+});
+new Chart(document.getElementById('intBar'),{
+  type:'bar',data:{labels:['Fiji','Samoa','Solomon Islands'],datasets:[
+    {label:'On Track',data:[8,3,24],backgroundColor:'#1B4F9B'},
+    {label:'Completed',data:[2,6,1],backgroundColor:'#0F7B6C'},
+    {label:'Not Started',data:[23,11,1],backgroundColor:'#C47A15'},
+    {label:'At Risk',data:[0,0,1],backgroundColor:'#B83232'},
+    {label:'Cancelled',data:[3,0,0],backgroundColor:'#9399A8'}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:9,color:'#3C4057'}}},
+    scales:{x:{stacked:true,ticks:{color:'#9399A8'},grid:{display:false}},y:{stacked:true,ticks:{color:'#9399A8'},grid:{color:'#F0F2F8'}}}}
+});
+new Chart(document.getElementById('intDonut'),{
+  type:'doughnut',
+  data:{labels:['On Track','Completed','Not Started','At Risk','Cancelled'],
+    datasets:[{data:[35,9,35,1,3],backgroundColor:['#1B4F9B','#0F7B6C','#C47A15','#B83232','#9399A8'],borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+ctx.parsed}}}}
+});
+function makeGauge(id,pct,color){
+  new Chart(document.getElementById(id),{type:'doughnut',
+    data:{datasets:[{data:[pct,100-pct],backgroundColor:[color,'#E8EAF0'],borderWidth:0,circumference:180,rotation:270}]},
+    options:{responsive:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+}
+makeGauge('g1',20,'#C47A15');makeGauge('g2',27,'#C47A15');makeGauge('g3',100,'#2E7D32');
+makeGauge('g4',44,'#1B4F9B');makeGauge('g5',3.8,'#B83232');makeGauge('g6',15.7,'#C47A15');
+
+// ── RESULTS FRAMEWORK ──
+const rfData=[
+  {level:"Impact",indicator:"Prevalence of moderate or severe food insecurity (SDG 2.1.2)",type:"Quantitative",baseline:"Fiji: 19.3%; Samoa: 23.6%; Sol. Is.: N/A",prog2024:"—",y2target:"Baseline being designed",prog2025:"—",totalTarget:"15% reduction",cumulative:"—",pct:null,comments:"Baseline pending; early qualitative reports show improved food access."},
+  {level:"Outcome",indicator:"Proportion of agricultural area under sustainable agriculture (SDG 2.4.1)",type:"Quantitative",baseline:"TBD",prog2024:"—",y2target:"Inception survey completed",prog2025:"—",totalTarget:"+15% increase",cumulative:"TBD via 2026 eval",pct:null,comments:"Sustainable practice pilots underway."},
+  {level:"Output 1",indicator:"Agrifood policy briefs / advisories developed",type:"Quantitative",baseline:"0",prog2024:"0",y2target:"6",prog2025:"4",totalTarget:"15",cumulative:"4 (27%)",pct:27,comments:"1 policy review + 3 feasibility studies. 9 reviews & 2 FLW studies underway."},
+  {level:"Output 1",indicator:"Enablers (policy makers, extension staff) trained",type:"Quantitative",baseline:"0",prog2024:"0",y2target:"40",prog2025:"—",totalTarget:"300",cumulative:"47 (15.7%)",pct:15.7,comments:"~40 stakeholders trained at Solomon Islands forum."},
+  {level:"Output 1",indicator:"Market studies conducted",type:"Quantitative",baseline:"0",prog2024:"0",y2target:"2",prog2025:"—",totalTarget:"6",cumulative:"2",pct:33,comments:"2 feed feasibility studies — Samoa and Solomon Islands."},
+  {level:"Output 1",indicator:"Actionable recommendations on reducing FLW",type:"Quantitative",baseline:"0",prog2024:"0",y2target:"2",prog2025:"—",totalTarget:"2",cumulative:"—",pct:null,comments:"To be reviewed 2025–2026."},
+  {level:"Output 2",indicator:"Farmers and households trained and supported",type:"Quantitative",baseline:"0",prog2024:"0",y2target:"600",prog2025:"350",totalTarget:"2,000",cumulative:"415 (20%)",pct:20,comments:"50 stallholders + 111 farmers trained. Additional under apiary & livestock."},
+  {level:"Output 2",indicator:"Livestock feed mills established",type:"Quantitative",baseline:"0",prog2024:"0",y2target:"0",prog2025:"—",totalTarget:"3",cumulative:"—",pct:null,comments:"Survey planned 2025–2026."},
+  {level:"Output 2",indicator:"Farmers shifting to nature positive production",type:"Quantitative",baseline:"0",prog2024:"0",y2target:"0",prog2025:"—",totalTarget:"500",cumulative:"—",pct:null,comments:"Survey planned 2025–2026."},
+  {level:"Output 2",indicator:"Hectares shifting to nature positive production",type:"Quantitative",baseline:"0",prog2024:"0",y2target:"TBD",prog2025:"—",totalTarget:"100 ha",cumulative:"—",pct:null,comments:"Survey planned 2025–2026."},
+  {level:"Output 2",indicator:"Volume, yield and value of cropped/livestock production",type:"Quantitative",baseline:"0",prog2024:"0",y2target:"TBD",prog2025:"—",totalTarget:"10% increase",cumulative:"—",pct:null,comments:"Survey planned 2025–2026."},
+  {level:"Output 2",indicator:"Average agricultural income of beneficiary farmers",type:"Quantitative",baseline:"0",prog2024:"0",y2target:"TBD",prog2025:"—",totalTarget:"10% increase",cumulative:"—",pct:null,comments:"Survey planned 2025–2026."},
+  {level:"Output 3",indicator:"Agribusiness incubation centres established",type:"Quantitative",baseline:"0",prog2024:"0",y2target:"3",prog2025:"3 (completed)",totalTarget:"3",cumulative:"3 (100%)",pct:100,comments:"All 3 countries; operationalized late 2025."},
+  {level:"Output 3",indicator:"Small agribusinesses established/supported",type:"Quantitative",baseline:"0",prog2024:"0",y2target:"30",prog2025:"—",totalTarget:"90",cumulative:"40 (44%)",pct:44,comments:"30 under Pacific Agri-Innovate 2024; 60 more planned."},
+  {level:"Output 3",indicator:"Youth and women trained on agribusiness",type:"Quantitative",baseline:"0",prog2024:"0",y2target:"100",prog2025:"—",totalTarget:"500",cumulative:"19 (3.8%)",pct:3.8,comments:"9 trained; 400 planned 2025–26."}
+];
+function rfAlert(r){
+  if(r.pct===null) return '<span class="flag gray">— N/A</span>';
+  if(r.pct>=80) return '<span class="flag green">✓ On Track</span>';
+  if(r.pct>=30) return '<span class="flag amber">⚠ Monitor</span>';
+  return '<span class="flag red">🔴 Behind</span>';
+}
+function getLPC(l){return l==="Impact"?"lp-impact":l==="Outcome"?"lp-outcome":l==="Output 1"?"lp-o1":l==="Output 2"?"lp-o2":"lp-o3";}
+function getPC(l){return l==="Output 3"?"var(--green)":l==="Output 2"?"var(--amber)":l==="Output 1"?"var(--blue)":"var(--teal)";}
+function renderRF(f){
+  const tb=document.getElementById('rfBody');
+  const rows=f==='all'?rfData:f==='behind'?rfData.filter(r=>r.pct!==null&&r.pct<30):rfData.filter(r=>r.level===f);
+  tb.innerHTML=rows.map((r,i)=>{
+    const pb=r.pct!==null?`<div class="pm"><div class="pmf" style="width:${r.pct}%;background:${getPC(r.level)}"></div></div>`:'';
+    return `<tr style="background:${i%2===0?'var(--white)':'var(--gray)'}">
+      <td><span class="lp ${getLPC(r.level)}">${r.level}</span></td>
+      <td style="max-width:220px;font-weight:500;">${r.indicator}</td>
+      <td style="white-space:nowrap;color:var(--gray3);">${r.type}</td>
+      <td style="color:var(--gray3);font-size:11px;">${r.baseline}</td>
+      <td style="text-align:center;">${r.prog2024}</td>
+      <td style="text-align:center;font-weight:500;color:var(--blue);">${r.y2target}</td>
+      <td style="text-align:center;">${r.prog2025}</td>
+      <td style="font-weight:600;color:var(--teal);white-space:nowrap;">${r.totalTarget}</td>
+      <td>${r.cumulative}${pb}</td>
+      <td>${rfAlert(r)}</td>
+      <td style="max-width:190px;color:var(--gray3);font-size:11px;">${r.comments}</td>
+    </tr>`;
+  }).join('');
+}
+function filterRF(v){
+  document.querySelectorAll('.rff').forEach(b=>{
+    const m={'all':'All','Impact':'Impact','Outcome':'Outcome','Output 1':'Output 1','Output 2':'Output 2','Output 3':'Output 3','behind':'🔴 Behind Target'};
+    b.classList.toggle('active',b.textContent.trim()===m[v]);
+  });
+  renderRF(v);
+}
+renderRF('all');
+</script>
+</body>
+</html>
